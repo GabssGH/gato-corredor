@@ -12,14 +12,17 @@
   <div id="stage">
     <canvas id="game"></canvas>
 
-    <div id="langToggle">
-      <button id="langPt" class="active">PT</button>
-      <button id="langEn">EN</button>
+    <div id="topBar">
+      <button id="musicToggle">🔊</button>
+      <div id="langToggle">
+        <button id="langPt" class="active">PT</button>
+        <button id="langEn">EN</button>
+      </div>
     </div>
 
     <div id="hud" class="hidden">
-      <div class="pill">🏆 <span id="scoreVal">0</span></div>
       <div class="pill">🪙 <span id="coinVal">0</span></div>
+      <div class="pill">🏆 <span id="scoreVal">0</span></div>
     </div>
 
     <div id="cycleWrap">
@@ -34,6 +37,7 @@
       <div id="menuList">
         <div class="menu-item" data-action="start"><span class="arrow">▶</span><span data-i18n="menuStart">Começar o jogo</span></div>
         <div class="menu-item" data-action="controls"><span class="arrow">▶</span><span data-i18n="menuControls">Comandos</span></div>
+        <div class="menu-item" data-action="shop"><span class="arrow">▶</span><span data-i18n="menuShop">Loja</span></div>
         <div class="menu-item" data-action="leaderboard"><span class="arrow">▶</span><span data-i18n="menuLeaderboard">Placar Global</span></div>
       </div>
     </div>
@@ -43,21 +47,22 @@
         <h2 data-i18n="controlsTitle">COMANDOS</h2>
         <div class="cmd-row">
           <div class="cmd-icon">⬆️</div>
-          <div class="cmd-text"><b data-i18n="ctrlJumpLabel">PULAR</b><span data-i18n="ctrlJumpDesc">Toque na tela, aperte ESPAÇO ou a seta ↑</span></div>
+          <div class="cmd-text"><b data-i18n="ctrlJumpLabel">PULAR</b><span data-i18n="ctrlJumpDesc">Segure para carregar o pulo — quanto mais tempo segurar, mais alto o gato pula. Não precisa carregar tudo!</span></div>
         </div>
         <div class="cmd-row">
           <div class="cmd-icon">⬇️</div>
           <div class="cmd-text"><b data-i18n="ctrlDuckLabel">ABAIXAR</b><span data-i18n="ctrlDuckDesc">Segure o botão, a seta ↓ ou a tecla S</span></div>
         </div>
-        <div class="cmd-row">
-          <div class="cmd-icon">🪙</div>
-          <div class="cmd-text"><b data-i18n="ctrlCoinLabel">MOEDAS</b><span data-i18n="ctrlCoinDesc">Colete para ganhar pontos extras</span></div>
-        </div>
-        <div class="cmd-row">
-          <div class="cmd-icon">🌗</div>
-          <div class="cmd-text"><b data-i18n="ctrlCycleLabel">CICLO DO DIA</b><span data-i18n="ctrlCycleDesc">Dia, tarde e noite se alternam durante a corrida</span></div>
-        </div>
         <button class="btn secondary" id="controlsBack" data-i18n="backBtn">Voltar</button>
+      </div>
+    </div>
+
+    <div id="shopPanel" class="panel-overlay hidden">
+      <div class="panel">
+        <h2 data-i18n="shopTitle">LOJA</h2>
+        <p class="lb-note" id="walletLine">🪙 0</p>
+        <div id="shopContent"></div>
+        <button class="btn secondary" id="shopBack" data-i18n="backBtn">Voltar</button>
       </div>
     </div>
 

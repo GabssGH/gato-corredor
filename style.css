@@ -33,9 +33,7 @@
     image-rendering: crisp-edges;
   }
 
-  .pixel-text{
-    font-family:'Press Start 2P', monospace;
-  }
+  .pixel-text{ font-family:'Press Start 2P', monospace; }
 
   /* ---------- HUD ---------- */
   #hud{
@@ -64,23 +62,29 @@
   #cycleWrap svg{ width:100%; height:100%; overflow:visible; }
   #cycleWrap.hidden{ display:none; }
 
-  /* ---------- language toggle ---------- */
-  #langToggle{
+  /* ---------- top bar (music + language) ---------- */
+  #topBar{
     position:absolute; top: max(10px, env(safe-area-inset-top)); right:12px;
-    z-index:30;
+    z-index:30; display:flex; gap:8px; align-items:center;
+  }
+  #topBar.hidden{ display:none; }
+  #musicToggle{
+    border:3px solid var(--wood-dark); border-radius:6px; background:var(--wood);
+    color:#e8d3b0; padding:8px 10px; font-size:16px; cursor:pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  }
+  #langToggle{
     display:flex; border:3px solid var(--wood-dark); border-radius:6px; overflow:hidden;
     font-family:'Press Start 2P', monospace; font-size:11px;
     box-shadow: 0 3px 0 rgba(0,0,0,0.4);
   }
-  #langToggle.hidden{ display:none; }
   #langToggle button{
     border:none; cursor:pointer; padding:8px 10px;
-    background: var(--wood); color:#e8d3b0;
-    font-family:inherit; font-size:inherit;
+    background: var(--wood); color:#e8d3b0; font-family:inherit; font-size:inherit;
   }
   #langToggle button.active{ background: var(--gold); color:#3d2814; }
 
-  /* ---------- Start screen (over the live scene, no box) ---------- */
+  /* ---------- Start screen ---------- */
   #startScreen{
     position:absolute; inset:0; z-index:10;
     display:flex; flex-direction:column; align-items:center;
@@ -101,7 +105,7 @@
     letter-spacing:1px;
   }
 
-  #menuList{ display:flex; flex-direction:column; gap: 16px; align-items:flex-start; }
+  #menuList{ display:flex; flex-direction:column; gap: 14px; align-items:flex-start; }
   .menu-item{
     font-family:'Press Start 2P', monospace;
     font-size: clamp(13px, 3.6vw, 19px);
@@ -115,7 +119,7 @@
   .menu-item.selected{ color: var(--gold); text-shadow: 2px 0 0 #5a3a14,-2px 0 0 #5a3a14,0 2px 0 #5a3a14,0 -2px 0 #5a3a14; transform: scale(1.05); }
   .menu-item.selected .arrow{ opacity:1; }
 
-  /* ---------- Panels (Comandos / Placar / Game Over) ---------- */
+  /* ---------- Panels ---------- */
   .panel-overlay{
     position:absolute; inset:0; z-index:25;
     display:flex; align-items:center; justify-content:center;
@@ -153,8 +157,10 @@
     text-align:left;
   }
   .cmd-icon{ font-size:26px; width:34px; text-align:center; flex-shrink:0; }
+  .cmd-text{ flex:1; min-width:0; }
   .cmd-text b{ font-family:'Press Start 2P', monospace; font-size:12px; display:block; margin-bottom:3px; color:var(--gold); }
   .cmd-text span{ font-size:18px; line-height:1.2; opacity:0.9; }
+  .cmd-row .btn.secondary{ margin-top:0; padding:8px 12px; font-size:11px; flex-shrink:0; }
 
   table#lbTable{ width:100%; border-collapse:collapse; font-size:18px; margin-top:6px; }
   table#lbTable th{ font-family:'Press Start 2P', monospace; font-size:10px; color:var(--gold); padding:6px 4px; border-bottom:2px solid var(--wood-dark); text-align:left; }
@@ -173,6 +179,7 @@
     margin-top:16px;
   }
   .btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #b1501e; }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
   .btn.secondary{ background: linear-gradient(180deg, #cfd8e8, #8f9bb3); box-shadow:0 5px 0 #5a6478; color:#1c2434; }
   .btn.secondary:active{ box-shadow:0 2px 0 #5a6478; }
   .btn-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
@@ -181,6 +188,8 @@
   .score-label{ opacity:0.75; font-size:13px; text-transform:uppercase; letter-spacing:1.5px; font-family:'Press Start 2P',monospace; }
   .best-row{ margin: 6px 0 4px 0; font-size:18px; opacity:0.9; }
   .player-name-row{ font-size:16px; opacity:0.8; margin-top:4px; }
+
+  .swatch{ width:34px; height:34px; border-radius:50%; flex-shrink:0; }
 
   /* ---------- Touch controls ---------- */
   #controls{
