@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Corredor Felino</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <div id="langToggle">
+      <button id="langPt" class="active">PT</button>
+      <button id="langEn">EN</button>
+    </div>
+
+    <div id="hud" class="hidden">
+      <div class="pill">🏆 <span id="scoreVal">0</span></div>
+      <div class="pill">🪙 <span id="coinVal">0</span></div>
+    </div>
+
+    <div id="cycleWrap">
+      <svg viewBox="0 0 220 34">
+        <path d="M 10 30 A 100 100 0 0 1 210 30" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="3" stroke-linecap="round"/>
+        <circle id="cycleDot" cx="10" cy="30" r="7" fill="#FFD65C" stroke="#fff" stroke-width="1.5"/>
+      </svg>
+    </div>
+
+    <div id="startScreen">
+      <h1 class="game-title" data-i18n="title">CORREDOR FELINO</h1>
+      <div id="menuList">
+        <div class="menu-item" data-action="start"><span class="arrow">▶</span><span data-i18n="menuStart">Começar o jogo</span></div>
+        <div class="menu-item" data-action="controls"><span class="arrow">▶</span><span data-i18n="menuControls">Comandos</span></div>
+        <div class="menu-item" data-action="leaderboard"><span class="arrow">▶</span><span data-i18n="menuLeaderboard">Placar Global</span></div>
+      </div>
+    </div>
+
+    <div id="controlsPanel" class="panel-overlay hidden">
+      <div class="panel">
+        <h2 data-i18n="controlsTitle">COMANDOS</h2>
+        <div class="cmd-row">
+          <div class="cmd-icon">⬆️</div>
+          <div class="cmd-text"><b data-i18n="ctrlJumpLabel">PULAR</b><span data-i18n="ctrlJumpDesc">Toque na tela, aperte ESPAÇO ou a seta ↑</span></div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-icon">⬇️</div>
+          <div class="cmd-text"><b data-i18n="ctrlDuckLabel">ABAIXAR</b><span data-i18n="ctrlDuckDesc">Segure o botão, a seta ↓ ou a tecla S</span></div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-icon">🪙</div>
+          <div class="cmd-text"><b data-i18n="ctrlCoinLabel">MOEDAS</b><span data-i18n="ctrlCoinDesc">Colete para ganhar pontos extras</span></div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-icon">🌗</div>
+          <div class="cmd-text"><b data-i18n="ctrlCycleLabel">CICLO DO DIA</b><span data-i18n="ctrlCycleDesc">Dia, tarde e noite se alternam durante a corrida</span></div>
+        </div>
+        <button class="btn secondary" id="controlsBack" data-i18n="backBtn">Voltar</button>
+      </div>
+    </div>
+
+    <div id="leaderboardPanel" class="panel-overlay hidden">
+      <div class="panel">
+        <h2 data-i18n="leaderboardTitle">PLACAR GLOBAL</h2>
+        <div id="lbContent"><div class="lb-loading" data-i18n="loadingLb">Carregando...</div></div>
+        <p class="lb-note" data-i18n="lbNote">Visível para todos os jogadores. Seu nome é gerado automaticamente.</p>
+        <button class="btn secondary" id="leaderboardBack" data-i18n="backBtn">Voltar</button>
+      </div>
+    </div>
+
+    <div id="gameOverScreen" class="panel-overlay hidden">
+      <div class="panel">
+        <div class="score-label" data-i18n="gameOverTitle">Fim de jogo</div>
+        <div class="score-final" id="finalScore">0</div>
+        <div class="best-row">🪙 <span id="finalCoins">0</span> <span data-i18n="coinsCollectedSuffix">moedas coletadas</span> · <span data-i18n="recordLabel">Recorde</span>: <span id="bestScore">0</span></div>
+        <div class="player-name-row" data-i18n="scoreSentNote">Sua pontuação foi enviada ao placar global como <span id="playerNameShown"></span>.</div>
+        <div class="btn-row">
+          <button class="btn" id="restartBtn" data-i18n="playAgainBtn">Jogar de novo</button>
+          <button class="btn secondary" id="toMenuBtn" data-i18n="menuBtn">Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls" class="hidden">
+      <div class="ctrl-btn" id="btnDuck"><span>⬇️</span><span data-i18n="duckShort">ABAIXAR</span></div>
+      <div class="ctrl-btn" id="btnJump"><span>⬆️</span><span data-i18n="jumpShort">PULAR</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
