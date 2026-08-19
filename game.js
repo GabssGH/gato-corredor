@@ -6,10 +6,10 @@
   // =============== i18n ===============
   const STR = {
     pt: {
-      title:'CORREDOR FELINO',
+      title:'GATO CORREDOR',
       menuStart:'Começar o jogo', menuControls:'Comandos', menuShop:'Loja', menuLeaderboard:'Placar Global',
       controlsTitle:'COMANDOS',
-      ctrlJumpLabel:'PULAR', ctrlJumpDesc:'Segure para carregar o pulo — quanto mais tempo segurar, mais alto o gato pula. Não precisa carregar tudo!',
+      ctrlJumpLabel:'PULAR', ctrlJumpDesc:'Toque na tela, aperte ESPAÇO ou a seta ↑',
       ctrlDuckLabel:'ABAIXAR', ctrlDuckDesc:'Segure o botão, a seta ↓ ou a tecla S',
       backBtn:'Voltar',
       shopTitle:'LOJA', buyBtn:'Comprar', selectBtn:'Selecionar', selectedLabel:'Selecionado', ownedLabel:'Adquirido',
@@ -27,10 +27,10 @@
       lbError:'Não foi possível carregar o placar agora.',
     },
     en: {
-      title:'FELINE RUNNER',
+      title:'CAT RUNNER',
       menuStart:'Start game', menuControls:'Controls', menuShop:'Shop', menuLeaderboard:'Global Leaderboard',
       controlsTitle:'CONTROLS',
-      ctrlJumpLabel:'JUMP', ctrlJumpDesc:'Hold to charge the jump — the longer you hold, the higher the cat jumps. You don\'t need to fill the whole bar!',
+      ctrlJumpLabel:'JUMP', ctrlJumpDesc:'Tap the screen, press SPACE or the ↑ arrow',
       ctrlDuckLabel:'DUCK', ctrlDuckDesc:'Hold the button, ↓ arrow or the S key',
       backBtn:'Back',
       shopTitle:'SHOP', buyBtn:'Buy', selectBtn:'Select', selectedLabel:'Selected', ownedLabel:'Owned',
@@ -76,7 +76,7 @@
   document.getElementById('langPt').addEventListener('click', ()=>{ lang='pt'; applyLanguage(); savePersonal('lang','pt'); });
   document.getElementById('langEn').addEventListener('click', ()=>{ lang='en'; applyLanguage(); savePersonal('lang','en'); });
 
-  // =============== storage helpers ===============
+  // =============== storage helpers (persisted per device) ===============
   async function savePersonal(key, value){ try{ await window.storage.set(key, value, false); }catch(e){} }
   async function loadPersonal(key){ try{ const res = await window.storage.get(key, false); return res ? res.value : null; }catch(e){ return null; } }
 
@@ -88,13 +88,13 @@
     return `${n}${a}${Math.floor(Math.random()*900+100)}`;
   }
 
-  // skins / shop
+  // skins / shop — default matches the cream-and-seal-point reference cat
   const SKINS = [
-    { id:'tabby',  name_pt:'Malhado Laranja', name_en:'Orange Tabby', price:0,   body:'#e8873a', dark:'#b85f22', belly:'#fff3e0' },
-    { id:'gray',   name_pt:'Cinza Malhado',   name_en:'Gray Tabby',   price:80,  body:'#9aa0a8', dark:'#6b7178', belly:'#e8ecef' },
-    { id:'tuxedo', name_pt:'Preto e Branco',  name_en:'Black & White',price:150, body:'#2b2b2b', dark:'#000000', belly:'#ffffff' },
-    { id:'black',  name_pt:'Totalmente Preto',name_en:'All Black',    price:300, body:'#1c1c1c', dark:'#000000', belly:'#3a3a3a' },
-    { id:'golden', name_pt:'Dourado',         name_en:'Golden',       price:500, body:'#ffd166', dark:'#c99a2e', belly:'#fff6d9' },
+    { id:'tabby',  name_pt:'Siamês',          name_en:'Siamese',      price:0,   body:'#ecd9b8', dark:'#4a3226', belly:'#f7efdd' },
+    { id:'gray',   name_pt:'Cinza Fumê',      name_en:'Smoke Gray',   price:80,  body:'#e6e7ea', dark:'#5a6068', belly:'#f2f3f5' },
+    { id:'tuxedo', name_pt:'Preto e Branco',  name_en:'Black & White',price:150, body:'#f7f0e6', dark:'#1a1a1a', belly:'#ffffff' },
+    { id:'black',  name_pt:'Totalmente Preto',name_en:'All Black',    price:300, body:'#2b2b2b', dark:'#000000', belly:'#4a4a4a' },
+    { id:'golden', name_pt:'Dourado',         name_en:'Golden',       price:500, body:'#ffe1a8', dark:'#8a5a2c', belly:'#fff3d6' },
   ];
 
   let playerName=null, totalCoins=0, ownedSkins=['tabby'], selectedSkinId='tabby', musicMuted=false;
@@ -268,6 +268,10 @@
       pixelRect(rx, y+r*unit, rowW, unit, unit, color);
     }
   }
+  function pixelSquareOutlined(cx,cy,size,unit,fill,outline){
+    pixelRect(cx-size/2-unit*0.4, cy-size/2-unit*0.4, size+unit*0.8, size+unit*0.8, unit, outline);
+    pixelRect(cx-size/2, cy-size/2, size, size, unit, fill);
+  }
 
   // =============== day/night cycle ===============
   const CYCLE_LENGTH = 72;
@@ -303,8 +307,7 @@
   let lastTime=0, elapsed=0;
   let score=0, runCoins=0, best=0, speed=0;
   const BASE_SPEED_REF = 6.2;
-  const CHARGE_TIME = 550;
-  const MIN_JUMP_VEL = -11, MAX_JUMP_VEL = -19;
+  const JUMP_VEL = -15;
   let cat, obstacles=[], coinList=[], particles=[];
   let spawnTimer=0, coinTimer=0;
   let farOffset=0, nearOffset=0;
@@ -318,9 +321,9 @@
   function makeCat(){
     return {
       x: () => W*0.14,
-      y: groundY - 54*scale,
-      vy:0, w:40*scale, h:54*scale, curH:54*scale,
-      ducking:false, grounded:true, charging:false, chargeTimer:0,
+      y: groundY - 42*scale,
+      vy:0, w:62*scale, h:42*scale, curH:42*scale,
+      ducking:false, grounded:true,
       legPhase:0, blink:0, tailPhase:0,
     };
   }
@@ -334,28 +337,18 @@
   }
 
   // =============== input ===============
-  function startCharge(){
+  function doJump(){
     if(state!=='playing') return;
-    if(!cat.grounded || cat.ducking || cat.charging) return;
-    cat.charging = true; cat.chargeTimer = 0;
-  }
-  function releaseJump(){
-    if(!cat || !cat.charging) return;
-    const charge = Math.min(1, cat.chargeTimer/CHARGE_TIME);
-    cat.charging = false; cat.chargeTimer = 0;
-    if(cat.grounded){
-      cat.vy = (MIN_JUMP_VEL + (MAX_JUMP_VEL-MIN_JUMP_VEL)*charge) * scale;
-      cat.grounded = false;
-    }
+    if(cat.ducking) return;
+    if(cat.grounded){ cat.vy = JUMP_VEL*scale; cat.grounded=false; }
   }
   function setDuck(v){
     if(state !== 'playing') return;
-    if(cat.charging) return;
     cat.ducking = v && cat.grounded;
   }
 
   window.addEventListener('keydown',(e)=>{
-    if(['Space','ArrowUp','KeyW'].includes(e.code)){ e.preventDefault(); startCharge(); }
+    if(['Space','ArrowUp','KeyW'].includes(e.code)){ e.preventDefault(); doJump(); }
     if(['ArrowDown','KeyS'].includes(e.code)){ e.preventDefault(); setDuck(true); }
     if(state==='start'){
       if(e.code==='ArrowDown'){ moveSelection(1); }
@@ -363,10 +356,7 @@
       if(e.code==='Enter'){ activateSelection(); }
     }
   });
-  window.addEventListener('keyup',(e)=>{
-    if(['Space','ArrowUp','KeyW'].includes(e.code)){ releaseJump(); }
-    if(['ArrowDown','KeyS'].includes(e.code)){ setDuck(false); }
-  });
+  window.addEventListener('keyup',(e)=>{ if(['ArrowDown','KeyS'].includes(e.code)) setDuck(false); });
 
   function bindHold(el,onDown,onUp){
     const down=(e)=>{ e.preventDefault(); e.stopPropagation(); el.classList.add('active'); onDown(); };
@@ -376,13 +366,10 @@
     el.addEventListener('pointerleave',up);
     el.addEventListener('pointercancel',up);
   }
-  bindHold(document.getElementById('btnJump'), startCharge, releaseJump);
+  bindHold(document.getElementById('btnJump'), doJump, ()=>{});
   bindHold(document.getElementById('btnDuck'), ()=>setDuck(true), ()=>setDuck(false));
-  canvas.addEventListener('pointerdown', ()=>{ if(state==='playing') startCharge(); });
-  canvas.addEventListener('pointerup', ()=>{ if(state==='playing') releaseJump(); });
-  canvas.addEventListener('pointerleave', ()=>{ if(state==='playing') releaseJump(); });
+  canvas.addEventListener('pointerdown', ()=>{ if(state==='playing') doJump(); });
 
-  // start music / audio context on first user gesture (autoplay policy)
   document.addEventListener('pointerdown', function once(){
     startMusic();
     document.removeEventListener('pointerdown', once);
@@ -437,32 +424,43 @@
   }
 
   // =============== obstacles & coins ===============
+  const PROP_DIMS = {
+    bench:    { h:20, w:44 },
+    lamppost: { h:34, w:10 },
+    trashcan: { h:18, w:16 },
+    hydrant:  { h:15, w:13 },
+    mailbox:  { h:22, w:14 },
+  };
+  const PROP_KINDS = Object.keys(PROP_DIMS);
+
   function spawnObstacle(){
     const roll = Math.random();
     let type;
-    if(roll < 0.42) type='house'; else if(roll < 0.75) type='walker'; else type='bridge';
+    if(roll < 0.5) type='prop'; else if(roll < 0.8) type='walker'; else type='bridge';
     let ob;
-    if(type==='house'){
-      const h=(34+Math.random()*16)*scale, w=(38+Math.random()*14)*scale;
-      ob = { type, x:W+20, y:groundY-h, w, h };
+    if(type==='prop'){
+      const kind = PROP_KINDS[Math.floor(Math.random()*PROP_KINDS.length)];
+      const d = PROP_DIMS[kind];
+      const h=d.h*scale, w=d.w*scale;
+      ob = { type:'prop', kind, x:W+20, y:groundY-h, w, h };
     } else if(type==='walker'){
       const isDog = Math.random() < 0.5;
-      const h = isDog ? (24+Math.random()*6)*scale : (42+Math.random()*8)*scale;
-      const w = isDog ? 30*scale : 20*scale;
-      ob = { type, kind:isDog?'dog':'person', x:W+20, y:groundY-h, w, h, selfSpeed:(16+Math.random()*20)*hScale, legPhase:Math.random()*Math.PI*2 };
+      const h = isDog ? 22*scale : 34*scale;
+      const w = isDog ? 28*scale : 18*scale;
+      ob = { type, kind:isDog?'dog':'person', x:W+20, y:groundY-h, w, h, selfSpeed:(4+Math.random()*8)*hScale, legPhase:Math.random()*Math.PI*2 };
     } else {
-      const gap=42*scale, beamH=20*scale, w=110*scale;
+      const gap=38*scale, beamH=18*scale, w=100*scale;
       ob = { type, x:W+20, y:groundY-gap-beamH, w, h:beamH, gap };
     }
     obstacles.push(ob);
     if(Math.random() < 0.8){
       if(type==='bridge'){
-        for(let i=0;i<3;i++) coinList.push({ x:ob.x+18*scale+i*26*scale, y:groundY-ob.gap*0.55-6*scale, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
+        for(let i=0;i<3;i++) coinList.push({ x:ob.x+16*scale+i*24*scale, y:groundY-ob.gap*0.55-6*scale, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
       } else {
         const n=3;
         for(let i=0;i<n;i++){
           const fx = ob.x + (i+0.5)*(ob.w/n);
-          coinList.push({ x:fx, y:ob.y-14*scale, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
+          coinList.push({ x:fx, y:ob.y-12*scale, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
         }
       }
     }
@@ -582,26 +580,46 @@
     ctx.restore();
   }
 
-  function drawObstacle(ob){
-    if(ob.type==='house'){
-      const wallH = ob.h*0.62;
-      pixelRect(ob.x, ob.y+ob.h-wallH, ob.w, wallH, PXU, '#d9a066');
-      pixelTriangleStack(ob.x-6*scale, ob.y, ob.w+12*scale, ob.h-wallH, PXU, '#b8433f');
-      const dw = ob.w*0.3, dh = wallH*0.55;
-      pixelRect(ob.x+ob.w/2-dw/2, ob.y+ob.h-dh, dw, dh, PXU, '#5a3a1c');
-      pixelRect(ob.x+ob.w*0.16, ob.y+ob.h-wallH+6*scale, ob.w*0.2, ob.w*0.2, PXU, '#2b2140');
+  function drawObstacle(ob, sky){
+    if(ob.type==='prop'){
+      const b = ob.x, base = ob.y+ob.h, w=ob.w, h=ob.h;
+      if(ob.kind==='bench'){
+        pixelRect(b, ob.y, w, h*0.28, PXU, '#8a5a2c');
+        pixelRect(b, ob.y+h*0.28, w*0.1, h*0.72, PXU, '#5a3a1c');
+        pixelRect(b+w*0.9, ob.y+h*0.28, w*0.1, h*0.72, PXU, '#5a3a1c');
+        pixelRect(b+w*0.06, ob.y-h*0.5, w*0.06, h*0.5, PXU, '#8a5a2c');
+        pixelRect(b+w*0.88, ob.y-h*0.5, w*0.06, h*0.5, PXU, '#8a5a2c');
+      } else if(ob.kind==='lamppost'){
+        pixelRect(b+w*0.4, ob.y, w*0.2, h, PXU, '#3a3f4b');
+        pixelRect(b, ob.y-h*0.5, w, h*0.16, PXU, '#3a3f4b');
+        const lit = sky.stars > 0.3;
+        if(lit){ ctx.save(); ctx.shadowColor='rgba(255,220,140,0.8)'; ctx.shadowBlur=16*scale; pixelBlob(b+w*0.5, ob.y-h*0.42, w*0.34, w*0.34, PXU, '#ffe38a'); ctx.restore(); }
+        else pixelBlob(b+w*0.5, ob.y-h*0.42, w*0.34, w*0.34, PXU, '#e8dfc8');
+      } else if(ob.kind==='trashcan'){
+        pixelRect(b, ob.y+h*0.18, w, h*0.82, PXU, '#5f7a5f');
+        pixelRect(b-w*0.08, ob.y, w*1.16, h*0.2, PXU, '#42563f');
+      } else if(ob.kind==='hydrant'){
+        pixelBlobOutlined(b+w*0.5, ob.y+h*0.4, w*0.42, h*0.4, PXU, '#c0392b', '#6b1f16');
+        pixelRect(b-w*0.15, ob.y+h*0.28, w*0.2, h*0.18, PXU, '#8a2318');
+        pixelRect(b+w*0.95, ob.y+h*0.28, w*0.2, h*0.18, PXU, '#8a2318');
+        pixelRect(b+w*0.32, ob.y-h*0.12, w*0.36, h*0.2, PXU, '#c0392b');
+      } else { // mailbox
+        pixelRect(b+w*0.4, ob.y+h*0.4, w*0.2, h*0.6, PXU, '#3a3f4b');
+        pixelBlobOutlined(b+w*0.5, ob.y+h*0.28, w*0.5, h*0.3, PXU, '#3d6a9e', '#1e3350');
+        pixelRect(b+w*0.62, ob.y+h*0.1, w*0.2, h*0.12, PXU, '#c0392b');
+      }
     } else if(ob.type==='walker'){
-      const legPhase = ob.legPhase + elapsed*0.012;
+      const legPhase = ob.legPhase + elapsed*0.006;
       if(ob.kind==='dog'){
         const body='#8a5a3c', dark='#5a3a22';
         pixelRect(ob.x, ob.y+ob.h*0.3, ob.w, ob.h*0.5, PXU, body);
         pixelBlobOutlined(ob.x+ob.w*0.85, ob.y+ob.h*0.25, ob.h*0.22, ob.h*0.22, PXU, body, dark);
-        const swing = Math.sin(legPhase)*3*scale;
+        const swing = Math.sin(legPhase)*2*scale;
         pixelRect(ob.x+ob.w*0.15+swing, ob.y+ob.h*0.75, ob.w*0.12, ob.h*0.25, PXU, dark);
         pixelRect(ob.x+ob.w*0.65-swing, ob.y+ob.h*0.75, ob.w*0.12, ob.h*0.25, PXU, dark);
       } else {
         const cx = ob.x+ob.w/2;
-        const swing = Math.sin(legPhase)*4*scale;
+        const swing = Math.sin(legPhase)*3*scale;
         pixelRect(ob.x+ob.w*0.15+swing, ob.y+ob.h*0.62, ob.w*0.28, ob.h*0.38, PXU, '#3d6a9e');
         pixelRect(ob.x+ob.w*0.55-swing, ob.y+ob.h*0.62, ob.w*0.28, ob.h*0.38, PXU, '#2c4d73');
         pixelRect(ob.x, ob.y+ob.h*0.3, ob.w, ob.h*0.35, PXU, '#3d6a9e');
@@ -616,88 +634,139 @@
     }
   }
 
-  // =============== cat sprite ===============
+  // =============== cat sprite — slim, siamese-style, real duck/jump poses ===============
   function drawCat(){
     const x = cat.x(), y = cat.y, w = cat.w, h = cat.curH;
-    const unit = Math.max(2, Math.round(w/11));
-    ctx.save(); ctx.translate(x,y);
+    const unit = Math.max(2, Math.round(h/10));
+    ctx.save();
 
-    const skinObj = SKINS.find(s=>s.id===selectedSkinId) || SKINS[0];
-    const body = skinObj.body, dark = skinObj.dark, belly = skinObj.belly, outline = '#2b1710';
+    let rot = 0;
+    if(!cat.grounded) rot = Math.max(-0.26, Math.min(0.26, -cat.vy*0.016));
+    ctx.translate(x + w*0.5, y + h*0.5);
+    ctx.rotate(rot);
+    ctx.translate(-w*0.5, -h*0.5);
 
-    // tail
-    const tailStep = cat.grounded ? Math.round(Math.sin(cat.tailPhase))*unit : unit;
-    pixelRect(-unit*2, h*0.3, unit*2.4, unit, unit, outline);
-    pixelRect(-unit*3, h*0.3-tailStep, unit*1.6, unit, unit, body);
+    const sk = SKINS.find(s=>s.id===selectedSkinId) || SKINS[0];
+    const body = sk.body, point = sk.dark, chest = sk.belly, outline = '#241d1a';
+    const eyeColor = '#5ec9e6';
+
+    const isDuck = cat.ducking;
+    const airborne = !cat.grounded;
+
+    const bodyRy = isDuck ? h*0.19 : h*0.27;
+    const bodyRx = isDuck ? w*0.36 : w*0.27;
+    const bodyCy = isDuck ? h*0.66 : h*0.44;
+    const bodyCx = w*0.46;
+    const headY = isDuck ? h*0.52 : h*0.22;
+    const headR = isDuck ? h*0.24 : h*0.30;
+    const headX = w*0.86;
+
+    // tail — cream near the body, dark seal point at the tip
+    const tailBaseX = bodyCx - bodyRx*0.75, tailBaseY = bodyCy - bodyRy*0.15;
+    const tailSegs = isDuck
+      ? [ {dx:-unit*1.1, dy:-unit*0.1}, {dx:-unit*2.0, dy:-unit*0.5} ]
+      : [ {dx:-unit*1.3, dy:unit*0.5}, {dx:-unit*2.6, dy:unit*0.1}, {dx:-unit*3.0, dy:-unit*1.4}, {dx:-unit*2.0, dy:-unit*2.9} ];
+    tailSegs.forEach((seg,i)=>{
+      const isPoint = i >= tailSegs.length-2;
+      const col = isPoint ? point : body;
+      const wob = cat.grounded && !isDuck ? Math.sin(cat.tailPhase)*unit*0.35 : 0;
+      pixelSquareOutlined(tailBaseX+seg.dx, tailBaseY+seg.dy+wob, unit*1.7, unit, col, outline);
+    });
 
     // legs
-    const legSwing = cat.charging ? 0 : (cat.grounded ? Math.sin(cat.legPhase) : -0.6);
-    const legLen = cat.ducking ? h*0.1 : h*0.28;
-    pixelRect(w*0.22+legSwing*unit, h-legLen, unit*1.6, legLen, unit, dark);
-    pixelRect(w*0.58-legSwing*unit, h-legLen, unit*1.6, legLen, unit, dark);
+    if(airborne){
+      pixelRect(bodyCx+bodyRx*0.05, bodyCy+bodyRy*0.55, unit*1.2, h*0.2, unit, point);
+      pixelSquareOutlined(bodyCx+bodyRx*0.05+unit*0.6, bodyCy+bodyRy*0.55+h*0.2, unit*1.3, unit, point, outline);
+      pixelRect(headX-headR*0.3, headY+headR*0.75, unit*1.2, h*0.36, unit, point);
+      pixelSquareOutlined(headX-headR*0.3+unit*0.6, headY+headR*0.75+h*0.36, unit*1.3, unit, point, outline);
+    } else {
+      const legSwing = Math.sin(cat.legPhase);
+      const legLen = isDuck ? h*0.1 : h*0.44;
+      const legW = unit*1.1;
+      const backLegX = bodyCx-bodyRx*0.5 - legSwing*unit*1.2;
+      const frontLegX = headX-headR*0.55 + legSwing*unit*1.2;
+      pixelRect(backLegX, bodyCy+bodyRy*0.55, legW, legLen, unit, point);
+      pixelSquareOutlined(backLegX+legW*0.5, bodyCy+bodyRy*0.55+legLen, unit*1.3, unit, point, outline);
+      pixelRect(frontLegX, bodyCy+bodyRy*0.45, legW, legLen*1.05, unit, point);
+      pixelSquareOutlined(frontLegX+legW*0.5, bodyCy+bodyRy*0.45+legLen*1.05, unit*1.3, unit, point, outline);
+    }
 
-    // body (slimmer, more elongated)
-    pixelBlobOutlined(w*0.46, h*0.5, w*0.24, h*0.34, unit, body, outline);
-    // belly
-    pixelBlob(w*0.5, h*0.66, w*0.13, h*0.17, unit, belly);
-    // stripes
-    for(let i=0;i<3;i++) pixelRect(w*(0.3+i*0.11), h*0.24, unit, h*0.15, unit, dark);
+    // body
+    pixelBlobOutlined(bodyCx, bodyCy, bodyRx, bodyRy, unit, body, outline);
+    pixelBlob(bodyCx+bodyRx*0.1, bodyCy+bodyRy*0.3, bodyRx*0.42, bodyRy*0.42, unit, chest);
 
     // head
-    const headR = w*0.21, headX=w*0.82, headY=h*0.28;
-    pixelBlobOutlined(headX, headY, headR, headR, unit, body, outline);
+    pixelBlobOutlined(headX, headY, headR, headR*0.9, unit, body, outline);
+    // seal-point face mask
+    pixelBlob(headX+headR*0.32, headY+headR*0.25, headR*0.55, headR*0.4, unit, point);
 
-    // ears
-    pixelTriangleStack(headX-headR*0.9, headY-headR*1.7, headR*0.7, headR*0.9, unit, outline);
-    pixelTriangleStack(headX-headR*0.75, headY-headR*1.5, headR*0.45, headR*0.6, unit, body);
-    pixelTriangleStack(headX+headR*0.25, headY-headR*1.7, headR*0.7, headR*0.9, unit, outline);
-    pixelTriangleStack(headX+headR*0.35, headY-headR*1.5, headR*0.45, headR*0.6, unit, body);
+    // ears — solid seal point
+    pixelTriangleStack(headX-headR*0.85, headY-headR*1.85, headR*0.5, headR*1.0, unit, outline);
+    pixelTriangleStack(headX-headR*0.72, headY-headR*1.6, headR*0.3, headR*0.75, unit, point);
+    pixelTriangleStack(headX+headR*0.35, headY-headR*1.85, headR*0.5, headR*1.0, unit, outline);
+    pixelTriangleStack(headX+headR*0.48, headY-headR*1.6, headR*0.3, headR*0.75, unit, point);
 
-    // eye
-    if(cat.blink <= 0) pixelRect(headX+headR*0.15, headY-unit*0.5, unit, unit, unit, outline);
-    else pixelRect(headX+headR*0.05, headY, unit*1.4, Math.max(1,unit*0.4), unit, outline);
+    // eyes — blue
+    if(cat.blink <= 0){
+      pixelRect(headX+headR*0.12, headY-unit*0.55, unit*1.1, unit*1.1, unit, eyeColor);
+      pixelRect(headX+headR*0.32, headY-unit*0.35, unit*0.5, unit*0.5, unit, '#1a1a1a');
+    } else {
+      pixelRect(headX+headR*0.08, headY-unit*0.1, unit*1.3, Math.max(1,unit*0.35), unit, outline);
+    }
     // nose
-    pixelRect(headX+headR*0.85, headY+unit*0.3, unit, unit, unit, dark);
-    // whiskers
-    pixelRect(headX+headR*0.9, headY-unit*0.2, unit*2, Math.max(1,unit*0.3), unit, 'rgba(43,23,16,0.5)');
-    pixelRect(headX+headR*0.9, headY+unit*0.8, unit*2, Math.max(1,unit*0.3), unit, 'rgba(43,23,16,0.5)');
+    pixelRect(headX+headR*0.72, headY+unit*0.35, unit*0.8, unit*0.8, unit, '#c98a8a');
+    // whiskers (light, contrasts against the dark mask)
+    pixelRect(headX+headR*0.55, headY+unit*0.05, unit*1.8, Math.max(1,unit*0.3), unit, 'rgba(255,255,255,0.65)');
+    pixelRect(headX+headR*0.55, headY+unit*0.85, unit*1.8, Math.max(1,unit*0.3), unit, 'rgba(255,255,255,0.65)');
 
     ctx.restore();
   }
 
-  function drawChargeBar(){
-    if(!cat.charging) return;
-    const amt = Math.min(1, cat.chargeTimer/CHARGE_TIME);
-    const bx = cat.x()+cat.w*0.05, by = cat.y-14*scale, bw = cat.w*0.9, bh = 6*scale;
-    pixelRect(bx-2*scale, by-2*scale, bw+4*scale, bh+4*scale, PXU, '#2b1710');
-    pixelRect(bx, by, bw, bh, PXU, '#5a3a1c');
-    pixelRect(bx, by, bw*amt, bh, PXU, '#ffd166');
-  }
-
-  // =============== decorative start-screen mushroom house ===============
+  // =============== decorative start-screen house (classic cottage) ===============
   function drawHomeHouse(sky){
     const baseX = W*0.16, baseY = groundY;
-    const s = Math.min(W,H)*0.34;
-    const unit = Math.max(2, Math.round(s/22));
+    const s = Math.min(W,H)*0.36;
+    const unit = Math.max(2, Math.round(s/26));
     ctx.save(); ctx.translate(baseX, baseY);
+
     for(let i=0;i<3;i++){
       const phase = (elapsed*0.001 + i*0.9) % 3;
-      const sy = -s*0.9 - phase*20*scale;
+      const sy = -s*1.15 - phase*20*scale;
       const alpha = Math.max(0, 1-phase/3);
       ctx.globalAlpha = alpha*0.5;
-      pixelBlob(s*0.22 + Math.sin(phase*3)*4*scale, sy, 7*scale+phase*3*scale, 7*scale+phase*3*scale, unit, '#d9d9d9');
+      pixelBlob(s*0.34 + Math.sin(phase*3)*4*scale, sy, 7*scale+phase*3*scale, 7*scale+phase*3*scale, unit, '#d9d9d9');
     }
     ctx.globalAlpha = 1;
-    pixelRect(s*0.14, -s*0.95, unit*3, s*0.35, unit, '#6b6f7a');
-    pixelBlobOutlined(0, -s*0.55, s*0.62, s*0.4, unit, '#b8433f', '#5a1f1c');
-    pixelBlob(-s*0.2, -s*0.65, s*0.08, s*0.08, unit, '#f2e9d8');
-    pixelBlob(s*0.15, -s*0.7, s*0.07, s*0.07, unit, '#f2e9d8');
-    pixelBlob(s*0.32, -s*0.5, s*0.06, s*0.06, unit, '#f2e9d8');
-    pixelRect(-s*0.42, -s*0.3, s*0.84, s*0.5, unit, '#d9a066');
-    pixelRect(-unit*3, -s*0.06, unit*6, s*0.24, unit, '#5a3a1c');
-    pixelRect(-unit*1, s*0.05, unit*1.4, unit*1.4, unit, '#ffd166');
-    pixelRect(s*0.12, -s*0.22, s*0.18, s*0.16, unit, '#2b2140');
-    pixelRect(s*0.12+(s*0.18)/2-unit*0.3, -s*0.22, unit*0.6, s*0.16, unit, '#5a3a1c');
+
+    // chimney
+    pixelRect(s*0.26, -s*1.05, unit*4, s*0.32, unit, '#4a3226');
+    pixelRect(s*0.24, -s*0.88, unit*4.6, unit*1.3, unit, '#5a4030');
+
+    // main roof
+    pixelRect(-s*0.52, -s*0.86, s*1.04, s*0.5, unit, '#2b3550');
+    pixelRect(-s*0.52, -s*0.38, s*1.04, unit*1.2, unit, '#e8dfce');
+
+    // small front gable over the door
+    pixelRect(-s*0.18, -s*0.73, s*0.36, s*0.24, unit, '#e8dfce');
+    pixelBlobOutlined(-5, -s*0.61, unit*1.3, unit*1.3, unit, '#c9dae6', '#2b3550');
+
+    // walls
+    pixelRect(-s*0.46, -s*0.36, s*0.92, s*0.56, unit, '#dba86a');
+    pixelRect(-s*0.46, -s*0.02, s*0.92, s*0.12, unit, '#b07a44');
+
+    // door + sidelights
+    pixelRect(-s*0.32, -s*0.02, s*0.14, s*0.28, unit, '#7a4a24');
+    pixelRect(-s*0.32+unit*0.6, -s*0.02+unit*0.6, s*0.14-unit*1.2, s*0.28-unit*1.2, unit, '#5a3418');
+    pixelRect(-s*0.38, -s*0.02, unit*1.4, s*0.28, unit, '#cfe0ea');
+    pixelRect(-s*0.16, -s*0.02, unit*1.4, s*0.28, unit, '#cfe0ea');
+
+    // big window with mullions
+    pixelRect(s*0.08, -s*0.28, s*0.32, s*0.2, unit, '#cfe0ea');
+    pixelRect(s*0.08+s*0.16-unit*0.4, -s*0.28, unit*0.8, s*0.2, unit, '#f5f0e6');
+    pixelRect(s*0.08, -s*0.28+s*0.1-unit*0.4, s*0.32, unit*0.8, unit, '#f5f0e6');
+    pixelRect(s*0.08-unit*0.6, -s*0.28-unit*0.6, s*0.32+unit*1.2, unit*0.8, unit, '#f5f0e6');
+    pixelRect(s*0.08-unit*0.6, -s*0.28+s*0.2-unit*0.2, s*0.32+unit*1.2, unit*0.8, unit, '#f5f0e6');
+
     ctx.restore();
   }
 
@@ -723,7 +792,6 @@
 
     if(cat){
       if(running){
-        if(cat.charging) cat.chargeTimer = Math.min(CHARGE_TIME, cat.chargeTimer+dt);
         const GRAV = 0.92*scale;
         if(!cat.grounded){
           cat.vy += GRAV*f; cat.y += cat.vy*f;
@@ -731,15 +799,13 @@
           if(cat.y >= standY){ cat.y=standY; cat.vy=0; cat.grounded=true; }
           cat.curH = cat.h;
         } else {
-          if(!cat.charging) cat.legPhase += 0.35*f*(speed/(BASE_SPEED_REF*hScale));
-          let curH = cat.h;
-          if(cat.ducking) curH = cat.h*0.55;
-          else if(cat.charging) curH = cat.h*(1-0.18*(cat.chargeTimer/CHARGE_TIME));
+          cat.legPhase += 0.35*f*(speed/(BASE_SPEED_REF*hScale));
+          const curH = cat.ducking ? cat.h*0.55 : cat.h;
           cat.curH = curH;
           cat.y = groundY - curH;
         }
       } else {
-        cat.grounded=true; cat.ducking=false; cat.charging=false; cat.chargeTimer=0;
+        cat.grounded=true; cat.ducking=false;
         cat.legPhase += 0.03*f;
         cat.curH = cat.h;
         cat.y = groundY - cat.h;
@@ -768,7 +834,7 @@
 
     const catX = cat.x();
     const curH = cat.curH;
-    const hb = { x: catX+cat.w*0.14, y: cat.y+curH*0.1, w: cat.w*0.72, h: curH*0.8 };
+    const hb = { x: catX+cat.w*0.16, y: cat.y+curH*0.12, w: cat.w*0.68, h: curH*0.76 };
     for(const ob of obstacles){
       const overlap = hb.x < ob.x+ob.w && hb.x+hb.w > ob.x && hb.y < ob.y+ob.h && hb.y+hb.h > ob.y;
       if(overlap){ endGame(); break; }
@@ -804,8 +870,8 @@
     for(const ob of obstacles) if(ob.type==='bridge') drawBridgeWater(ob, sky);
     if(state!=='playing') drawHomeHouse(sky);
     for(const c of coinList) drawCoin(c);
-    for(const ob of obstacles) drawObstacle(ob);
-    if(cat){ drawCat(); drawChargeBar(); }
+    for(const ob of obstacles) drawObstacle(ob, sky);
+    if(cat) drawCat();
     drawParticles();
     if(sky.stars > 0.1){
       ctx.save(); ctx.globalAlpha = sky.stars*0.22;
