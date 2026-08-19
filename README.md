@@ -57,7 +57,7 @@ O site está publicado e pode ser acessado diretamente pelo link abaixo:
 gato-corredor/
 ├── README.md
 ├── index.html      # Estrutura
-├── script.js      # Script
+├── game.js      # Script
 └── style.css      # Estilo
 ```
 
