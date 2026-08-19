@@ -261,9 +261,10 @@
     pixelBlob(cx,cy,rx,ry,unit,fill);
   }
   function pixelTriangleStack(x,y,w,h,unit,color){
+    // r=0 is the top row (narrow tip); the last row (bottom) is full width — a peak pointing up
     const rows = Math.max(1, Math.round(h/unit));
     for(let r=0;r<rows;r++){
-      const rowW = Math.max(unit, w*(1-r/rows));
+      const rowW = Math.max(unit, w*((r+1)/rows));
       const rx = x + (w-rowW)/2;
       pixelRect(rx, y+r*unit, rowW, unit, unit, color);
     }
@@ -731,7 +732,7 @@
 
     for(let i=0;i<3;i++){
       const phase = (elapsed*0.001 + i*0.9) % 3;
-      const sy = -s*1.15 - phase*20*scale;
+      const sy = -s*0.70 - phase*20*scale;
       const alpha = Math.max(0, 1-phase/3);
       ctx.globalAlpha = alpha*0.5;
       pixelBlob(s*0.34 + Math.sin(phase*3)*4*scale, sy, 7*scale+phase*3*scale, 7*scale+phase*3*scale, unit, '#d9d9d9');
@@ -739,16 +740,16 @@
     ctx.globalAlpha = 1;
 
     // chimney
-    pixelRect(s*0.26, -s*1.05, unit*4, s*0.32, unit, '#4a3226');
-    pixelRect(s*0.24, -s*0.88, unit*4.6, unit*1.3, unit, '#5a4030');
+    pixelRect(s*0.26, -s*0.65, unit*4, s*0.32, unit, '#4a3226');
+    pixelRect(s*0.24, -s*0.49, unit*4.6, unit*1.3, unit, '#5a4030');
 
     // main roof
-    pixelRect(-s*0.52, -s*0.86, s*1.04, s*0.5, unit, '#2b3550');
+    pixelTriangleStack(-s*0.52, -s*0.86, s*1.04, s*0.5, unit, '#2b3550');
     pixelRect(-s*0.52, -s*0.38, s*1.04, unit*1.2, unit, '#e8dfce');
 
     // small front gable over the door
-    pixelRect(-s*0.18, -s*0.73, s*0.36, s*0.24, unit, '#e8dfce');
-    pixelBlobOutlined(-5, -s*0.61, unit*1.3, unit*1.3, unit, '#c9dae6', '#2b3550');
+    pixelTriangleStack(-s*0.18, -s*0.72, s*0.36, s*0.24, unit, '#e8dfce');
+    pixelBlobOutlined(0, -s*0.6, unit*1.3, unit*1.3, unit, '#c9dae6', '#2b3550');
 
     // walls
     pixelRect(-s*0.46, -s*0.36, s*0.92, s*0.56, unit, '#dba86a');
