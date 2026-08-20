@@ -324,7 +324,7 @@
       x: () => W*0.14,
       y: groundY - 42*scale,
       vy:0, w:62*scale, h:42*scale, curH:42*scale,
-      ducking:false, grounded:true,
+      ducking:false, grounded:true, jumpsUsed:0,
       legPhase:0, blink:0, tailPhase:0,
     };
   }
@@ -341,7 +341,14 @@
   function doJump(){
     if(state!=='playing') return;
     if(cat.ducking) return;
-    if(cat.grounded){ cat.vy = JUMP_VEL*scale; cat.grounded=false; }
+    if(cat.grounded){
+      cat.vy = JUMP_VEL*scale;
+      cat.grounded = false;
+      cat.jumpsUsed = 1;
+    } else if(cat.jumpsUsed < 2){
+      cat.vy = JUMP_VEL*scale*0.92; // slightly lighter second jump
+      cat.jumpsUsed = 2;
+    }
   }
   function setDuck(v){
     if(state !== 'playing') return;
@@ -458,10 +465,13 @@
       if(type==='bridge'){
         for(let i=0;i<3;i++) coinList.push({ x:ob.x+16*scale+i*24*scale, y:groundY-ob.gap*0.55-6*scale, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
       } else {
+        // well above the obstacle, in the comfortable mid-arc of the jump —
+        // right at the obstacle top the cat is moving too fast vertically to grab them reliably
         const n=3;
+        const coinY = Math.min(ob.y-12*scale, groundY-74*scale);
         for(let i=0;i<n;i++){
           const fx = ob.x + (i+0.5)*(ob.w/n);
-          coinList.push({ x:fx, y:ob.y-12*scale, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
+          coinList.push({ x:fx, y:coinY, r:8*scale, taken:false, bob:Math.random()*Math.PI*2 });
         }
       }
     }
@@ -730,26 +740,40 @@
     const unit = Math.max(2, Math.round(s/26));
     ctx.save(); ctx.translate(baseX, baseY);
 
+    // chimney geometry — anchored to the actual roof slope (same formula pixelTriangleStack
+    // uses internally) so it sits connected to the roof instead of floating above it
+    const roofX=-s*0.52, roofY=-s*0.86, roofW=s*1.04, roofH=s*0.5;
+    const roofRows = Math.max(1, Math.round(roofH/unit));
+    const chimneyRow = Math.round(roofRows*0.46);
+    const rowW = Math.max(unit, roofW*((chimneyRow+1)/roofRows));
+    const roofRightXAtRow = roofX + (roofW-rowW)/2 + rowW;
+    const roofYAtRow = roofY + chimneyRow*unit;
+    const chimneyW = unit*4;
+    const chimneyX = roofRightXAtRow - chimneyW*0.75;
+    const chimneyTopY = roofYAtRow - s*0.34;
+    const chimneyBottomY = roofYAtRow + unit*2; // sinks slightly into the roof, so the join reads as solid
+
+    // smoke — rises from the chimney's actual top
     for(let i=0;i<3;i++){
       const phase = (elapsed*0.001 + i*0.9) % 3;
-      const sy = -s*0.70 - phase*20*scale;
+      const sy = chimneyTopY - phase*20*scale;
       const alpha = Math.max(0, 1-phase/3);
       ctx.globalAlpha = alpha*0.5;
-      pixelBlob(s*0.34 + Math.sin(phase*3)*4*scale, sy, 7*scale+phase*3*scale, 7*scale+phase*3*scale, unit, '#d9d9d9');
+      pixelBlob(chimneyX+chimneyW*0.5 + Math.sin(phase*3)*4*scale, sy, 7*scale+phase*3*scale, 7*scale+phase*3*scale, unit, '#d9d9d9');
     }
     ctx.globalAlpha = 1;
 
-    // chimney
-    pixelRect(s*0.26, -s*0.65, unit*4, s*0.32, unit, '#4a3226');
-    pixelRect(s*0.24, -s*0.49, unit*4.6, unit*1.3, unit, '#5a4030');
-
     // main roof
-    pixelTriangleStack(-s*0.52, -s*0.86, s*1.04, s*0.5, unit, '#2b3550');
-    pixelRect(-s*0.52, -s*0.38, s*1.04, unit*1.2, unit, '#e8dfce');
+    pixelTriangleStack(roofX, roofY, roofW, roofH, unit, '#2b3550');
+    pixelRect(roofX, -s*0.38, roofW, unit*1.2, unit, '#e8dfce');
+
+    // chimney — drawn after the roof so it visibly sits on top of / through it
+    pixelRect(chimneyX, chimneyTopY, chimneyW, chimneyBottomY-chimneyTopY, unit, '#4a3226');
+    pixelRect(chimneyX-unit*0.3, chimneyTopY, chimneyW+unit*0.6, unit*1.3, unit, '#5a4030');
 
     // small front gable over the door
-    pixelTriangleStack(-s*0.18, -s*0.72, s*0.36, s*0.24, unit, '#e8dfce');
-    pixelBlobOutlined(0, -s*0.6, unit*1.3, unit*1.3, unit, '#c9dae6', '#2b3550');
+    pixelTriangleStack(-s*0.18, -s*0.75, s*0.36, s*0.24, unit, '#e8dfce');
+    pixelBlobOutlined(0, -s*0.61, unit*1.3, unit*1.3, unit, '#c9dae6', '#2b3550');
 
     // walls
     pixelRect(-s*0.46, -s*0.36, s*0.92, s*0.56, unit, '#dba86a');
@@ -797,7 +821,7 @@
         if(!cat.grounded){
           cat.vy += GRAV*f; cat.y += cat.vy*f;
           const standY = groundY-cat.h;
-          if(cat.y >= standY){ cat.y=standY; cat.vy=0; cat.grounded=true; }
+          if(cat.y >= standY){ cat.y=standY; cat.vy=0; cat.grounded=true; cat.jumpsUsed=0; }
           cat.curH = cat.h;
         } else {
           cat.legPhase += 0.35*f*(speed/(BASE_SPEED_REF*hScale));
@@ -829,6 +853,16 @@
     if(coinTimer <= 0){ if(Math.random()<0.5) spawnGroundCoins(); coinTimer = 900+Math.random()*900; }
 
     for(const ob of obstacles) ob.x -= (speed + (ob.selfSpeed||0))*f;
+    // enforce a minimum safe gap between consecutive obstacles at all times — this is what
+    // actually guarantees no two obstacles (even a fast walker catching up to a bench) ever
+    // end up too close for the cat to clear, regardless of spawn timing quirks
+    obstacles.sort((a,b)=>a.x-b.x);
+    const MIN_GAP_PX = Math.max(160*scale, speed*40);
+    for(let i=1;i<obstacles.length;i++){
+      const prev = obstacles[i-1], cur = obstacles[i];
+      const minX = prev.x+prev.w+MIN_GAP_PX;
+      if(cur.x < minX) cur.x = minX;
+    }
     obstacles = obstacles.filter(ob => ob.x+ob.w > -20);
     for(const c of coinList) c.x -= speed*f;
     coinList = coinList.filter(c => c.x > -20 && !c.taken);
