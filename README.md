@@ -39,7 +39,9 @@ Além do entretenimento, o projeto também representa a aplicação prática de 
 
 ## 📷 Demonstração
 
-> <img width="1919" height="962" alt="image" src="https://github.com/user-attachments/assets/db6b4306-bc4e-4a7f-b1da-5efe4ea7de10" />
+<img width="1919" height="963" alt="Captura de tela 2026-08-19 151452" src="https://github.com/user-attachments/assets/7e9dc35f-fd6f-474d-9427-73ec467c245b" />
+
+
 
 ---
 
