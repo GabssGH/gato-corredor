@@ -13,9 +13,14 @@
       ctrlDuckLabel:'ABAIXAR', ctrlDuckDesc:'Segure o botão, a seta ↓ ou a tecla S',
       backBtn:'Voltar',
       shopTitle:'LOJA', buyBtn:'Comprar', selectBtn:'Selecionar', selectedLabel:'Selecionado', ownedLabel:'Adquirido',
+      changeProfile:'Trocar jogador',
+      nicknameTitle:'QUEM É VOCÊ?',
+      nicknameNote:'Seu progresso (moedas e peles) fica salvo com esse nome, em qualquer aparelho. Nomes iguais compartilham o mesmo progresso.',
+      nicknamePlaceholder:'Seu nickname',
+      nicknamePlay:'Jogar',
       leaderboardTitle:'PLACAR GLOBAL',
       loadingLb:'Carregando...',
-      lbNote:'Visível para todos os jogadores. Seu nome é gerado automaticamente.',
+      lbNote:'Visível para todos os jogadores.',
       lbEmpty:'Ainda não há pontuações. Seja o primeiro a correr!',
       lbRank:'#', lbName:'Nome', lbScore:'Pontos', lbCoins:'Moedas',
       gameOverTitle:'Fim de jogo',
@@ -34,9 +39,14 @@
       ctrlDuckLabel:'DUCK', ctrlDuckDesc:'Hold the button, ↓ arrow or the S key',
       backBtn:'Back',
       shopTitle:'SHOP', buyBtn:'Buy', selectBtn:'Select', selectedLabel:'Selected', ownedLabel:'Owned',
+      changeProfile:'Switch player',
+      nicknameTitle:'WHO ARE YOU?',
+      nicknameNote:'Your progress (coins and skins) is saved under this name, on any device. Matching names share the same progress.',
+      nicknamePlaceholder:'Your nickname',
+      nicknamePlay:'Play',
       leaderboardTitle:'GLOBAL LEADERBOARD',
       loadingLb:'Loading...',
-      lbNote:'Visible to every player. Your name is generated automatically.',
+      lbNote:'Visible to every player.',
       lbEmpty:'No scores yet. Be the first to run!',
       lbRank:'#', lbName:'Name', lbScore:'Score', lbCoins:'Coins',
       gameOverTitle:'Game over',
@@ -52,6 +62,7 @@
   function t(key){ return (STR[lang] && STR[lang][key]) || STR.pt[key] || key; }
 
   const startScreen = document.getElementById('startScreen');
+  const nicknameScreen = document.getElementById('nicknameScreen');
   const controlsPanel = document.getElementById('controlsPanel');
   const shopPanel = document.getElementById('shopPanel');
   const leaderboardPanel = document.getElementById('leaderboardPanel');
@@ -70,6 +81,7 @@
     document.title = t('title');
     document.getElementById('langPt').classList.toggle('active', lang==='pt');
     document.getElementById('langEn').classList.toggle('active', lang==='en');
+    document.getElementById('nicknameInput').placeholder = t('nicknamePlaceholder');
     if(!leaderboardPanel.classList.contains('hidden')) renderLeaderboard(lastLbData, lastLbError);
     if(!shopPanel.classList.contains('hidden')) renderShop();
   }
@@ -99,31 +111,73 @@
 
   let playerName=null, totalCoins=0, ownedSkins=['tabby'], selectedSkinId='tabby', musicMuted=false;
 
-  async function ensurePlayerIdentity(){
-    let name = await loadPersonal('playerName');
-    if(!name){ name = generateRandomName(); await savePersonal('playerName', name); }
-    playerName = name;
+  // =============== profile "database" — one shared record per nickname ===============
+  // stored under shared key `player:<nickname>` so the same nickname loads the same
+  // progress on any device; the nickname itself is remembered on THIS device so it
+  // doesn't need to be retyped every visit.
+  async function loadProfile(nickname){
+    playerName = nickname;
+    try{
+      const res = await window.storage.get(`player:${nickname}`, true);
+      if(res && res.value){
+        const data = JSON.parse(res.value);
+        totalCoins = Number(data.totalCoins) || 0;
+        ownedSkins = Array.isArray(data.ownedSkins) && data.ownedSkins.length ? data.ownedSkins : ['tabby'];
+        if(!ownedSkins.includes('tabby')) ownedSkins.unshift('tabby');
+        selectedSkinId = (data.selectedSkin && ownedSkins.includes(data.selectedSkin)) ? data.selectedSkin : 'tabby';
+      } else {
+        totalCoins = 0; ownedSkins = ['tabby']; selectedSkinId = 'tabby';
+        await saveProfile();
+      }
+    }catch(e){
+      totalCoins = 0; ownedSkins = ['tabby']; selectedSkinId = 'tabby';
+    }
+    document.getElementById('coinVal').textContent = totalCoins;
+  }
+  async function saveProfile(){
+    if(!playerName) return;
+    try{
+      await window.storage.set(`player:${playerName}`, JSON.stringify({
+        totalCoins, ownedSkins, selectedSkin: selectedSkinId, updatedAt: Date.now()
+      }), true);
+    }catch(e){}
+  }
 
+  document.getElementById('nicknameSubmit').addEventListener('click', confirmNickname);
+  document.getElementById('nicknameInput').addEventListener('keydown', (e)=>{
+    e.stopPropagation();
+    if(e.code==='Enter') confirmNickname();
+  });
+  async function confirmNickname(){
+    let name = document.getElementById('nicknameInput').value.trim().slice(0,18);
+    if(!name) name = generateRandomName();
+    await savePersonal('deviceNickname', name);
+    await loadProfile(name);
+    state='start'; showScreen('start');
+  }
+  document.getElementById('switchProfileBtn').addEventListener('click', async ()=>{
+    await savePersonal('deviceNickname', '');
+    document.getElementById('nicknameInput').value = generateRandomName();
+    state='nickname'; showScreen('nickname');
+  });
+
+  async function boot(){
     const savedLang = await loadPersonal('lang');
     if(savedLang==='pt' || savedLang==='en') lang = savedLang;
-
-    const savedTotal = await loadPersonal('totalCoins');
-    totalCoins = savedTotal ? (parseInt(savedTotal,10)||0) : 0;
-
-    const savedOwned = await loadPersonal('ownedSkins');
-    try{ ownedSkins = savedOwned ? JSON.parse(savedOwned) : ['tabby']; }catch(e){ ownedSkins=['tabby']; }
-    if(!ownedSkins.includes('tabby')) ownedSkins.unshift('tabby');
-
-    const savedSkin = await loadPersonal('selectedSkin');
-    selectedSkinId = (savedSkin && ownedSkins.includes(savedSkin)) ? savedSkin : 'tabby';
-
     const savedMuted = await loadPersonal('musicMuted');
     musicMuted = savedMuted === '1';
     document.getElementById('musicToggle').textContent = musicMuted ? '🔇' : '🔊';
     if(masterGain) masterGain.gain.value = musicMuted ? 0 : 0.16;
-
-    document.getElementById('coinVal').textContent = totalCoins;
     applyLanguage();
+
+    const savedNick = await loadPersonal('deviceNickname');
+    if(savedNick){
+      await loadProfile(savedNick);
+      state='start'; showScreen('start');
+    } else {
+      document.getElementById('nicknameInput').value = generateRandomName();
+      state='nickname'; showScreen('nickname');
+    }
   }
 
   async function submitScore(name, scoreVal, coinsVal){
@@ -194,7 +248,7 @@
         btn.disabled = isSelected;
         btn.addEventListener('click', ()=>{
           selectedSkinId = sk.id;
-          savePersonal('selectedSkin', sk.id);
+          saveProfile();
           renderShop();
         });
       } else {
@@ -205,9 +259,7 @@
             totalCoins -= sk.price;
             ownedSkins.push(sk.id);
             selectedSkinId = sk.id;
-            savePersonal('totalCoins', String(totalCoins));
-            savePersonal('ownedSkins', JSON.stringify(ownedSkins));
-            savePersonal('selectedSkin', sk.id);
+            saveProfile();
             document.getElementById('coinVal').textContent = totalCoins;
             renderShop();
           }
@@ -397,6 +449,7 @@
 
   function showScreen(which){
     startScreen.classList.toggle('hidden', which!=='start');
+    nicknameScreen.classList.toggle('hidden', which!=='nickname');
     controlsPanel.classList.toggle('hidden', which!=='controls');
     shopPanel.classList.toggle('hidden', which!=='shop');
     leaderboardPanel.classList.toggle('hidden', which!=='leaderboard');
@@ -879,7 +932,7 @@
       if(Math.sqrt(dx*dx+dy*dy) < c.r+cat.w*0.4){
         c.taken=true; runCoins+=1; totalCoins+=1; score+=10;
         document.getElementById('coinVal').textContent = totalCoins;
-        savePersonal('totalCoins', String(totalCoins));
+        saveProfile(); // persisted to this nickname's shared record
         particles.push({x:c.x,y:c.y,life:400,maxLife:400});
       }
     }
@@ -978,7 +1031,6 @@
   resize();
   initStars();
   cat = makeCat();
-  ensurePlayerIdentity();
-  applyLanguage();
+  boot();
   requestAnimationFrame(loop);
 })();
