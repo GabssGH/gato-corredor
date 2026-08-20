@@ -32,7 +32,16 @@
       </svg>
     </div>
 
-    <div id="startScreen">
+    <div id="nicknameScreen" class="panel-overlay hidden">
+      <div class="panel">
+        <h2 data-i18n="nicknameTitle">QUEM É VOCÊ?</h2>
+        <p class="lb-note" data-i18n="nicknameNote">Seu progresso (moedas e peles) fica salvo com esse nome, em qualquer aparelho. Nomes iguais compartilham o mesmo progresso.</p>
+        <input id="nicknameInput" type="text" maxlength="18" autocomplete="off" />
+        <button class="btn" id="nicknameSubmit" data-i18n="nicknamePlay">Jogar</button>
+      </div>
+    </div>
+
+    <div id="startScreen" class="hidden">
       <h1 class="game-title" data-i18n="title">GATO CORREDOR</h1>
       <div id="menuList">
         <div class="menu-item" data-action="start"><span class="arrow">▶</span><span data-i18n="menuStart">Começar o jogo</span></div>
@@ -62,7 +71,10 @@
         <h2 data-i18n="shopTitle">LOJA</h2>
         <p class="lb-note" id="walletLine">🪙 0</p>
         <div id="shopContent"></div>
-        <button class="btn secondary" id="shopBack" data-i18n="backBtn">Voltar</button>
+        <div class="btn-row">
+          <button class="btn secondary" id="shopBack" data-i18n="backBtn">Voltar</button>
+          <button class="btn secondary" id="switchProfileBtn" data-i18n="changeProfile">Trocar jogador</button>
+        </div>
       </div>
     </div>
 
